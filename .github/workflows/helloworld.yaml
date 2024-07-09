@@ -29,7 +29,9 @@ jobs:
 
       
       - name: Run mycode script
-        run: sh mycode.sh
+        run: |
+          chmod +x mycode.sh
+          ./mycode.sh
         shell: bash
 
       
