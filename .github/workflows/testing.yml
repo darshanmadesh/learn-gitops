@@ -18,25 +18,25 @@ jobs:
         run: |
           # Define the GitHub username you want to query
           USERNAME="darshanmadesh"
-          
+
           # Define the GraphQL query to get the user's contributions
           QUERY=$(cat <<EOF
           {
-            "query": "{ 
-              user(login: \\"$USERNAME\\") { 
+            "query": "{
+              user(login: \\"$USERNAME\\") {
                 contributionsCollection {
                   totalCommitContributions
-                  pullRequestContributionsByRepository {
+                  pullRequestContributionsByRepository(maxRepositories: 100) {
                     pullRequests(first: 100) {
                       totalCount
                     }
                   }
-                  pullRequestReviewContributionsByRepository {
+                  pullRequestReviewContributionsByRepository(maxRepositories: 100) {
                     pullRequestReviews(first: 100) {
                       totalCount
                     }
                   }
-                  pullRequestContributionsByRepository {
+                  pullRequestContributionsByRepository(maxRepositories: 100) {
                     mergedPullRequests: pullRequests(first: 100, states: MERGED) {
                       totalCount
                     }
@@ -59,11 +59,11 @@ jobs:
           # Output the API response (contributions data)
           echo "$response"
 
-          # Extract the total commits, PRs raised, reviewed, and merged from the response
-          total_commits=$(echo "$response" | jq -r '.data.user.contributionsCollection.totalCommitContributions')
-          total_prs_raised=$(echo "$response" | jq -r '[.data.user.contributionsCollection.pullRequestContributionsByRepository[].pullRequests.totalCount] | add')
-          total_prs_reviewed=$(echo "$response" | jq -r '[.data.user.contributionsCollection.pullRequestReviewContributionsByRepository[].pullRequestReviews.totalCount] | add')
-          total_prs_merged=$(echo "$response" | jq -r '[.data.user.contributionsCollection.pullRequestContributionsByRepository[].mergedPullRequests.totalCount] | add')
+          # Extract the total commits, PRs raised, reviewed, and merged from the response with error handling
+          total_commits=$(echo "$response" | jq -r '.data.user.contributionsCollection.totalCommitContributions // 0')
+          total_prs_raised=$(echo "$response" | jq -r '[.data.user.contributionsCollection.pullRequestContributionsByRepository[]?.pullRequests.totalCount // 0] | add')
+          total_prs_reviewed=$(echo "$response" | jq -r '[.data.user.contributionsCollection.pullRequestReviewContributionsByRepository[]?.pullRequestReviews.totalCount // 0] | add')
+          total_prs_merged=$(echo "$response" | jq -r '[.data.user.contributionsCollection.pullRequestContributionsByRepository[]?.mergedPullRequests.totalCount // 0] | add')
 
           # Output extracted statistics
           echo "Total Commits: $total_commits"
