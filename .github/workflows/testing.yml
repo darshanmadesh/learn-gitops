@@ -17,8 +17,8 @@ jobs:
         id: github_api
         run: |
           # Replace with the repository and owner you want to query
-          REPO_OWNER="owner-name"
-          REPO_NAME="repo-name"
+          REPO_OWNER="darshanmadesh"
+          REPO_NAME="learn-gitops"
 
           # Make the API request to fetch the latest commits
           response=$(curl -s \
