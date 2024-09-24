@@ -1,7 +1,7 @@
-name: GitHub GraphQL API Call Workflow
+name: GitHub Contributions Statistics Workflow
 
 on:
-  workflow_dispatch: # This allows the workflow to be manually triggered
+  workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
   graphql_api_call_job:
@@ -12,22 +12,43 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Make a GraphQL API call using GitHub API to get user contributions
+      # Step 2: GitHub GraphQL API Call to get user contributions data
       - name: GitHub GraphQL API Call
         id: graphql_api
         run: |
           # Define the GitHub username you want to query
           USERNAME="darshanmadesh"
           
-          # Define the GraphQL query
+          # Define the GraphQL query to get the user's contributions
           QUERY=$(cat <<EOF
           {
-            "query": "{ user(login: \\"$USERNAME\\") { contributionsCollection { contributionCalendar { totalContributions weeks { contributionDays { contributionCount date } } } } } }"
+            "query": "{ 
+              user(login: \\"$USERNAME\\") { 
+                contributionsCollection {
+                  totalCommitContributions
+                  pullRequestContributionsByRepository {
+                    pullRequests(first: 100) {
+                      totalCount
+                    }
+                  }
+                  pullRequestReviewContributionsByRepository {
+                    pullRequestReviews(first: 100) {
+                      totalCount
+                    }
+                  }
+                  pullRequestContributionsByRepository {
+                    mergedPullRequests: pullRequests(first: 100, states: MERGED) {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            }"
           }
           EOF
           )
 
-          # Make the GraphQL API request to fetch the user's contribution calendar
+          # Make the GraphQL API request
           response=$(curl -s \
             -H "Authorization: bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
@@ -38,14 +59,28 @@ jobs:
           # Output the API response (contributions data)
           echo "$response"
 
-          # Extract the total contributions and print them
-          total_contributions=$(echo "$response" | jq -r '.data.user.contributionsCollection.contributionCalendar.totalContributions')
-          echo "Total Contributions: $total_contributions"
-          
-          # Set the total contributions as an output
-          echo "::set-output name=total_contributions::$total_contributions"
+          # Extract the total commits, PRs raised, reviewed, and merged from the response
+          total_commits=$(echo "$response" | jq -r '.data.user.contributionsCollection.totalCommitContributions')
+          total_prs_raised=$(echo "$response" | jq -r '[.data.user.contributionsCollection.pullRequestContributionsByRepository[].pullRequests.totalCount] | add')
+          total_prs_reviewed=$(echo "$response" | jq -r '[.data.user.contributionsCollection.pullRequestReviewContributionsByRepository[].pullRequestReviews.totalCount] | add')
+          total_prs_merged=$(echo "$response" | jq -r '[.data.user.contributionsCollection.pullRequestContributionsByRepository[].mergedPullRequests.totalCount] | add')
 
-      # Step 3: Output the total contributions in the workflow logs
-      - name: Display Total Contributions
+          # Output extracted statistics
+          echo "Total Commits: $total_commits"
+          echo "Total PRs Raised: $total_prs_raised"
+          echo "Total PRs Reviewed: $total_prs_reviewed"
+          echo "Total PRs Merged: $total_prs_merged"
+
+          # Set the outputs for use in subsequent steps
+          echo "::set-output name=total_commits::$total_commits"
+          echo "::set-output name=total_prs_raised::$total_prs_raised"
+          echo "::set-output name=total_prs_reviewed::$total_prs_reviewed"
+          echo "::set-output name=total_prs_merged::$total_prs_merged"
+
+      # Step 3: Display the contributions statistics in the workflow logs
+      - name: Display Contribution Statistics
         run: |
-          echo "The total contributions for the user are: ${{ steps.graphql_api.outputs.total_contributions }}"
+          echo "Total commits by the user: ${{ steps.graphql_api.outputs.total_commits }}"
+          echo "Total PRs raised by the user: ${{ steps.graphql_api.outputs.total_prs_raised }}"
+          echo "Total PRs reviewed by the user: ${{ steps.graphql_api.outputs.total_prs_reviewed }}"
+          echo "Total PRs merged by the user: ${{ steps.graphql_api.outputs.total_prs_merged }}"
