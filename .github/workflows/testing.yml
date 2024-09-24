@@ -1,29 +1,47 @@
-name: GitHub API Call Workflow
+name: GitHub GraphQL API Call Workflow
 
 on:
   workflow_dispatch: # This allows the workflow to be manually triggered
 
 jobs:
-  api_call_job:
+  graphql_api_call_job:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repository (not strictly necessary for API call but included as a standard practice)
+      # Step 1: Checkout the repository (optional)
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Make an API call using the GitHub API to list the latest commits
-      - name: GitHub API Call
-        id: github_api
+      # Step 2: Make a GraphQL API call using GitHub API to get user contributions
+      - name: GitHub GraphQL API Call
+        id: graphql_api
         run: |
-          # Replace with the repository and owner you want to query
-          USER_NAME="darshanmadesh"
-
-          # Make the API request to fetch the latest commits
-          response=$(curl -s \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/users/$USER_NAME/events")
+          # Define the GitHub username you want to query
+          USERNAME="your-github-username"
           
-          # Output the API response (the latest 5 commits)
+          # Define the GraphQL query
+          QUERY='{
+            "query": "{ user(login: \\"'"$USERNAME"\\") { contributionsCollection { contributionCalendar { totalContributions weeks { contributionDays { contributionCount date } } } } } }"
+          }'
+
+          # Make the GraphQL API request to fetch the user's contribution calendar
+          response=$(curl -s \
+            -H "Authorization: bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -X POST \
+            -d "$QUERY" \
+            https://api.github.com/graphql)
+
+          # Output the API response (contributions data)
           echo "$response"
+
+          # Extract the total contributions and print them
+          total_contributions=$(echo "$response" | jq -r '.data.user.contributionsCollection.contributionCalendar.totalContributions')
+          echo "Total Contributions: $total_contributions"
+          
+          # Set the total contributions as an output
+          echo "::set-output name=total_contributions::$total_contributions"
+
+      # Step 3: Output the total contributions in the workflow logs
+      - name: Display Total Contributions
+        run: |
+          echo "The total contributions for the user are: ${{ steps.graphql_api.outputs.total_contributions }}"
