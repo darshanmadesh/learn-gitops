@@ -17,7 +17,7 @@ jobs:
         id: graphql_api
         run: |
           # Define the GitHub username you want to query
-          USERNAME="your-github-username"
+          USERNAME="darshanmadesh"
           
           # Define the GraphQL query
           QUERY='{
