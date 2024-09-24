@@ -17,26 +17,13 @@ jobs:
         id: github_api
         run: |
           # Replace with the repository and owner you want to query
-          REPO_OWNER="darshanmadesh"
-          REPO_NAME="learn-gitops"
+          USER_NAME="darshanmadesh"
 
           # Make the API request to fetch the latest commits
           response=$(curl -s \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/commits?per_page=5")
+            "https://api.github.com/https://api.github.com/users/$USER_NAME/events")
           
           # Output the API response (the latest 5 commits)
           echo "$response"
-
-          # Save the commit SHAs for further processing if needed
-          commits=$(echo "$response" | jq -r '.[].sha')
-          echo "Latest Commit SHAs: $commits"
-          
-          # Set the output of the step to be used later in the workflow
-          echo "::set-output name=commits::$commits"
-
-      # Step 3: Print the commits (for logging or future use)
-      - name: Output Commits
-        run: |
-          echo "The latest 5 commits are: ${{ steps.github_api.outputs.commits }}"
